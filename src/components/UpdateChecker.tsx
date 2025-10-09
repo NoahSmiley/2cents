@@ -68,12 +68,19 @@ export function UpdateChecker() {
     setError(null);
 
     try {
+      console.log('Starting download...');
       const result = await window.electronAPI.downloadUpdate();
+      console.log('Download result:', result);
+      
       if (!result.success) {
         setError(result.error || 'Failed to download update');
         setDownloading(false);
+      } else {
+        // Download started successfully
+        console.log('Download started, waiting for completion...');
       }
     } catch (err: any) {
+      console.error('Download error:', err);
       setError(err.message || 'Failed to download update');
       setDownloading(false);
     }

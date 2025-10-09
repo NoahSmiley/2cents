@@ -110,6 +110,13 @@ autoUpdater.on('update-available', (info) => {
   }
 });
 
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`Download progress: ${progressObj.percent}%`);
+  if (win) {
+    win.webContents.send('download-progress', progressObj);
+  }
+});
+
 autoUpdater.on('update-downloaded', (info) => {
   console.log('Update downloaded:', info.version);
   if (win) {
@@ -119,6 +126,9 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (err) => {
   console.error('Update error:', err);
+  if (win) {
+    win.webContents.send('update-error', err.message);
+  }
 });
 
 // IPC handlers for updates
