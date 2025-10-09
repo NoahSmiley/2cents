@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
 import Page from "./Page";
+import { UpdateChecker } from "@/components/UpdateChecker";
 
 export default function SettingsPage() {
   const settings = useSettings();
@@ -118,6 +119,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Update Checker */}
+        <UpdateChecker />
       </div>
     </Page>
   );

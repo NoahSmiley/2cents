@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Th, LegendSwatch, Td } from "@/components/recurring/TableHelpers";
 import { BillRow } from "@/components/recurring/BillRow";
 import type { Bill } from "@/components/recurring/types";
-import { KEY } from "@/components/recurring/types";
 import { useSettings } from "@/hooks/use-settings";
 import { useGoals } from "@/hooks/use-goals";
+import * as dbService from "@/lib/db-service";
 import {
   todayISO,
   startOfDay,
@@ -19,34 +19,20 @@ import {
   formatShort,
 } from "@/lib/date-utils";
 
-/* ----------------------------- Storage ----------------------------- */
-
-function loadBills(): Bill[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Bill[]) : [
-      { id: crypto.randomUUID(), name: "Rent",      amount: 1400, dueDay: 1,  lastPaid: "" },
-      { id: crypto.randomUUID(), name: "Phone",     amount: 90,   dueDay: 12, lastPaid: "" },
-      { id: crypto.randomUUID(), name: "Utilities", amount: 160,  dueDay: 18, lastPaid: "" },
-    ];
-  } catch {
-    return [];
-  }
-}
-
-function saveBills(next: Bill[]) {
-  localStorage.setItem(KEY, JSON.stringify(next));
-}
-
 export default function RecurringBills() {
-  const [bills, setBills] = useState<Bill[]>(() => loadBills());
+  const [bills, setBills] = useState<Bill[]>([]);
   const settings = useSettings();
   const { goals } = useGoals();
   const isMinimalist = settings.uiMode === "minimalist";
   const categories = settings.categories || [];
   const currency = settings.currency || "$";
 
-  useEffect(() => saveBills(bills), [bills]);
+  // Load bills from database on mount
+  useEffect(() => {
+    dbService.getAllBills().then(data => {
+      setBills(data);
+    });
+  }, []);
 
   // add form
   const [newName, setNewName] = useState("");
@@ -81,22 +67,21 @@ export default function RecurringBills() {
       });
   }, [bills]);
 
-  function addBill() {
+  async function addBill() {
     const amt = Number(newAmount);
     const day = Math.max(1, Math.min(31, Number(newDueDay)));
     if (!newName.trim() || !Number.isFinite(amt)) return;
-    setBills((prev) => [
-      { 
-        id: crypto.randomUUID(), 
-        name: newName.trim(), 
-        amount: Math.abs(amt), 
-        dueDay: day, 
-        lastPaid: "",
-        category: newCategory || undefined,
-        linkedGoalId: newLinkedGoalId || undefined,
-      },
-      ...prev,
-    ]);
+    
+    const newBill = await dbService.addBill({
+      name: newName.trim(), 
+      amount: Math.abs(amt), 
+      dueDay: day, 
+      lastPaid: undefined,
+      category: newCategory || undefined,
+      linkedGoalId: newLinkedGoalId || undefined,
+    });
+    
+    setBills((prev) => [newBill, ...prev]);
     setNewName("");
     setNewAmount("");
     setNewDueDay("1");
@@ -104,13 +89,15 @@ export default function RecurringBills() {
     setNewLinkedGoalId("");
   }
 
-  function removeBill(id: string) {
+  async function removeBill(id: string) {
     if (!confirm("Delete this bill/subscription?")) return;
+    await dbService.removeBill(id);
     setBills((prev) => prev.filter((b) => b.id !== id));
   }
 
-  function markPaid(id: string, event?: React.MouseEvent) {
+  async function markPaid(id: string, event?: React.MouseEvent) {
     const today = todayISO();
+    await dbService.updateBill(id, { lastPaid: today });
     setBills((prev) => prev.map((b) => (b.id === id ? { ...b, lastPaid: today } : b)));
     
     // Get button position for confetti origin

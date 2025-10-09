@@ -1,14 +1,22 @@
 {
-  "name": "minimal-electron",
+  "name": "2cents",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "main": "electron/main.ts",
+  "version": "1.0.0",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "electron": "npx electron .",
+    "preload:build": "tsc electron/preload.ts --outDir dist-electron --module commonjs --target es2020 --moduleResolution node --skipLibCheck --esModuleInterop",
+    "dev:electron": "npm run preload:build && concurrently \"npm run dev\" \"npm run electron:wait\"",
+    "electron:wait": "wait-on http://localhost:5173 && npx electron .",
+    "start": "npm run dev:electron",
+    "build": "npm run preload:build && tsc -b && vite build && electron-rebuild",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:electron": "npm run build && electron-builder",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -25,9 +33,11 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tailwindcss/vite": "^4.1.14",
+    "better-sqlite3": "^12.4.1",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "electron-updater": "^6.6.2",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.545.0",
     "motion": "^12.23.22",
@@ -41,7 +51,9 @@
     "tailwindcss": "^4.1.14"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@eslint/js": "^9.36.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.7.0",
     "@types/react": "^19.1.16",
@@ -49,7 +61,10 @@
     "@types/react-grid-layout": "^1.3.5",
     "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
-    "electron": "^38.2.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^38.2.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
@@ -60,6 +75,56 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
     "vite": "^7.1.7",
-    "vite-plugin-electron": "^0.29.0"
+    "vite-plugin-electron": "^0.29.0",
+    "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.twocents.budgettracker",
+    "productName": "2cents Budget Tracker",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "electron/**/*.cjs",
+      "!electron/**/*.ts"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.png",
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "public/icon.png",
+      "category": "public.app-category.finance"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "public/icon.png",
+      "category": "Finance"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "2cents Budget Tracker"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "NoahSmiley",
+      "repo": "2cents",
+      "private": false
+    }
   }
 }

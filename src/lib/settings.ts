@@ -1,4 +1,6 @@
 // src/lib/settings.ts
+import * as dbService from './db-service';
+
 export type Category = { id: string; name: string; limit: number }
 export type UIMode = "professional" | "minimalist"
 export type Settings = { 
@@ -6,8 +8,6 @@ export type Settings = {
   categories: Category[];
   uiMode: UIMode;
 }
-
-const KEY = "twocents.settings.v1"
 
 const uid = () =>
   (globalThis.crypto && "randomUUID" in globalThis.crypto
@@ -26,14 +26,22 @@ const DEFAULTS: Settings = {
 }
 
 // --- cache + listeners ------------------
-let current: Settings = (() => {
-  try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as Settings) : DEFAULTS
-  } catch {
-    return DEFAULTS
+let current: Settings = DEFAULTS;
+let _initialized = false;
+
+async function initialize() {
+  if (!_initialized) {
+    try {
+      current = await dbService.getSettings();
+    } catch {
+      current = DEFAULTS;
+    }
+    _initialized = true;
   }
-})()
+}
+
+// Initialize on module load
+initialize();
 
 const listeners = new Set<() => void>()
 const emit = () => {
@@ -43,10 +51,10 @@ const emit = () => {
   }
 }
 
-function persist(next: Settings) {
-  current = next // <-- update cache
-  localStorage.setItem(KEY, JSON.stringify(next))
-  emit()
+async function persist(next: Settings) {
+  current = next; // <-- update cache
+  await dbService.updateSettings(next);
+  emit();
 }
 
 export const SettingsStore = {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as dbService from "@/lib/db-service";
 
 export interface Goal {
   id: string;
@@ -15,54 +16,49 @@ export interface Goal {
   linkedBillNames?: string[];
 }
 
-const STORAGE_KEY = "twocents-goals";
-
 export function useGoals() {
-  const [goals, setGoals] = useState<Goal[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load goals from database on mount
+  useEffect(() => {
+    dbService.getAllGoals().then(data => {
+      setGoals(data);
+      setLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        setGoals(stored ? JSON.parse(stored) : []);
-      } catch {
-        setGoals([]);
-      }
+    const handleStorageChange = async () => {
+      const data = await dbService.getAllGoals();
+      setGoals(data);
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    
-    // Also listen for custom event for same-window updates
+    // Listen for custom event for same-window updates
     window.addEventListener("goals-updated", handleStorageChange);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("goals-updated", handleStorageChange);
     };
   }, []);
 
-  const updateGoal = (goalId: string, amount: number) => {
-    const updatedGoals = goals.map(g => {
-      if (g.id === goalId) {
-        const newCurrent = g.isDebt 
-          ? g.current - amount  // Debt: subtract payment
-          : g.current + amount; // Savings: add contribution
-        
-        return { ...g, current: Math.max(0, newCurrent) };
-      }
-      return g;
-    });
+  const updateGoal = async (goalId: string, amount: number) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) return;
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedGoals));
+    const newCurrent = goal.isDebt 
+      ? goal.current - amount  // Debt: subtract payment
+      : goal.current + amount; // Savings: add contribution
+    
+    await dbService.updateGoal(goalId, { current: Math.max(0, newCurrent) });
+    
+    // Update local state
+    setGoals(goals.map(g => 
+      g.id === goalId ? { ...g, current: Math.max(0, newCurrent) } : g
+    ));
+    
     window.dispatchEvent(new Event("goals-updated"));
   };
 
-  return { goals, updateGoal };
+  return { goals, updateGoal, loading };
 }

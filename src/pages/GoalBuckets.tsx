@@ -12,6 +12,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 import { CategorySelector } from "@/components/goals/CategorySelector";
 import Page from "./Page";
 import { cn } from "@/lib/utils";
+import * as dbService from "@/lib/db-service";
 
 interface Goal {
   id: string;
@@ -28,8 +29,6 @@ interface Goal {
   linkedBillNames?: string[]; // Recurring bill names that auto-contribute
 }
 
-const STORAGE_KEY = "twocents-goals";
-
 const CATEGORY_CONFIG = {
   emergency: { label: "Emergency", color: "#ef4444" },
   savings: { label: "Savings", color: "#3b82f6" },
@@ -39,22 +38,10 @@ const CATEGORY_CONFIG = {
   other: { label: "Other", color: "#6b7280" },
 };
 
-function loadGoals(): Goal[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-function saveGoals(goals: Goal[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
-}
-
 export default function GoalBuckets() {
   const { currency = "$", uiMode } = useSettings();
   const isMinimalist = uiMode === "minimalist";
-  const [goals, setGoals] = useState<Goal[]>(() => loadGoals());
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showContributeModal, setShowContributeModal] = useState(false);
@@ -70,19 +57,21 @@ export default function GoalBuckets() {
   const [linkedBillNames, setLinkedBillNames] = useState<string[]>([]);
   const [newLinkInput, setNewLinkInput] = useState("");
 
+  // Load goals from database on mount
   useEffect(() => {
-    saveGoals(goals);
-  }, [goals]);
+    dbService.getAllGoals().then(data => {
+      setGoals(data);
+    });
+  }, []);
 
-  function addGoal() {
+  async function addGoal() {
     if (!name || !target) return;
     
     const config = CATEGORY_CONFIG[category];
     const isDebt = category === "debt";
     const targetNum = Number(target);
     
-    const newGoal: Goal = {
-      id: crypto.randomUUID(),
+    const newGoal = await dbService.addGoal({
       name: name.trim(),
       current: isDebt ? targetNum : 0,        // Debt: starts at debt amount
       target: isDebt ? 0 : targetNum,         // Debt: target is $0
@@ -91,7 +80,7 @@ export default function GoalBuckets() {
       color: config.color,
       isDebt,
       originalDebt: isDebt ? targetNum : undefined, // Store original debt amount
-    };
+    });
     
     setGoals([...goals, newGoal]);
     setName("");
@@ -113,12 +102,24 @@ export default function GoalBuckets() {
     setShowEditModal(true);
   }
 
-  function updateGoal() {
+  async function updateGoal() {
     if (!selectedGoal || !name || !target) return;
     
     const config = CATEGORY_CONFIG[category];
     const isDebt = category === "debt";
     const targetNum = Number(target);
+    
+    await dbService.updateGoal(selectedGoal.id, {
+      name: name.trim(), 
+      target: isDebt ? 0 : targetNum,
+      category,
+      targetDate: targetDate || undefined,
+      color: config.color,
+      isDebt,
+      originalDebt: isDebt ? targetNum : undefined,
+      linkedCategories,
+      linkedBillNames,
+    });
     
     setGoals(goals.map(g => 
       g.id === selectedGoal.id 
@@ -147,38 +148,41 @@ export default function GoalBuckets() {
     setShowEditModal(false);
   }
 
-  function deleteGoal(id: string) {
+  async function deleteGoal(id: string) {
     if (!confirm("Delete this goal?")) return;
+    await dbService.removeGoal(id);
     setGoals(goals.filter(g => g.id !== id));
   }
 
-  function contribute(id: string, amount: number) {
+  async function contribute(id: string, amount: number) {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    
+    // For debt: paying down decreases current (opposite of savings)
+    const newCurrent = goal.isDebt 
+      ? goal.current - amount  // Debt: subtract payment
+      : goal.current + amount; // Savings: add contribution
+    
+    // Check if goal just reached
+    const wasIncomplete = goal.isDebt 
+      ? goal.current > 0 
+      : goal.current < goal.target;
+    const isNowComplete = goal.isDebt 
+      ? newCurrent <= 0 
+      : newCurrent >= goal.target;
+    
+    const updates: any = { current: Math.max(0, newCurrent) };
+    
+    if (wasIncomplete && isNowComplete) {
+      triggerGoalConfetti();
+      updates.completedAt = new Date().toISOString();
+    }
+    
+    await dbService.updateGoal(id, updates);
+    
     setGoals(goals.map(g => {
       if (g.id === id) {
-        // For debt: paying down decreases current (opposite of savings)
-        const newCurrent = g.isDebt 
-          ? g.current - amount  // Debt: subtract payment
-          : g.current + amount; // Savings: add contribution
-        
-        // Check if goal just reached
-        const wasIncomplete = g.isDebt 
-          ? g.current > 0 
-          : g.current < g.target;
-        const isNowComplete = g.isDebt 
-          ? newCurrent <= 0 
-          : newCurrent >= g.target;
-        
-        if (wasIncomplete && isNowComplete) {
-          triggerGoalConfetti();
-          // Mark completion date
-          return { 
-            ...g, 
-            current: Math.max(0, newCurrent),
-            completedAt: new Date().toISOString(),
-          };
-        }
-        
-        return { ...g, current: Math.max(0, newCurrent) };
+        return { ...g, ...updates };
       }
       return g;
     }));

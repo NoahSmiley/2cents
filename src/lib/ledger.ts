@@ -1,4 +1,6 @@
 // src/lib/ledger.ts
+import * as dbService from './db-service';
+
 export type Txn = {
   id: string
   date: string // ISO
@@ -8,54 +10,63 @@ export type Txn = {
   who?: string
 }
 
-const KEY = "twocents.ledger.v1"
-
 // ---- internal cache so getSnapshot is stable ----
-let _cache: Txn[] = load()
+let _cache: Txn[] = []
 let _version = 0
+let _initialized = false
 
-function load(): Txn[] {
+async function load(): Promise<Txn[]> {
   try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as Txn[]) : []
+    const txns = await dbService.getAllTransactions();
+    // sort newest first by date
+    txns.sort((a, b) => +new Date(b.date) - +new Date(a.date));
+    return txns;
   } catch {
     return []
   }
 }
-function persist(next: Txn[]) {
-  // sort newest first by date
-  next.sort((a, b) => +new Date(b.date) - +new Date(a.date));
-  localStorage.setItem(KEY, JSON.stringify(next));
-  _cache = next;
+
+async function initialize() {
+  if (!_initialized) {
+    _cache = await load();
+    _initialized = true;
+  }
+}
+
+function notifyUpdate() {
   _version++;
   window.dispatchEvent(new Event("ledger:update"));
 }
 
-// optional: keep cache in sync if another tab edits data
-window.addEventListener("storage", (e) => {
-  if (e.key === KEY) {
-    _cache = load()
-    _version++
-    window.dispatchEvent(new Event("ledger:update"))
-  }
-})
+// Initialize on module load
+initialize();
 
 export const Ledger = {
   // stable snapshot parts
   version() { return _version },
   all(): Txn[] { return _cache }, // IMPORTANT: returns the cached array (stable ref unless changed)
 
-  add(t: Omit<Txn, "id">) {
-    const tx: Txn = { id: crypto.randomUUID(), ...t }
-    persist([tx, ..._cache])
+  async add(t: Omit<Txn, "id">) {
+    const tx = await dbService.addTransaction(t);
+    _cache = [tx, ..._cache];
+    notifyUpdate();
   },
 
-  remove(id: string) {
-    persist(_cache.filter(t => t.id !== id))
+  async remove(id: string) {
+    await dbService.removeTransaction(id);
+    _cache = _cache.filter(t => t.id !== id);
+    notifyUpdate();
   },
 
-  clear() {
-    localStorage.removeItem(KEY)
-    persist([]) // also resets cache + notifies
+  async clear() {
+    await dbService.clearTransactions();
+    _cache = [];
+    notifyUpdate();
+  },
+  
+  // Refresh cache from database
+  async refresh() {
+    _cache = await load();
+    notifyUpdate();
   },
 }
