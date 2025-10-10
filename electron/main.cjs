@@ -34,6 +34,7 @@ async function createWindow() {
     width: 1000,
     height: 700,
     title: '2cents - Budget Tracker',
+    frame: false, // Remove default frame for custom title bar
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -155,6 +156,29 @@ ipcMain.handle('download-update', async () => {
 
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
+});
+
+// Window control handlers
+ipcMain.handle('window:minimize', () => {
+  if (win) win.minimize();
+});
+
+ipcMain.handle('window:maximize', () => {
+  if (win) {
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
+  }
+});
+
+ipcMain.handle('window:close', () => {
+  if (win) win.close();
+});
+
+ipcMain.handle('window:isMaximized', () => {
+  return win ? win.isMaximized() : false;
 });
 
 // Catch any unhandled errors

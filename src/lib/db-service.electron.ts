@@ -1,60 +1,7 @@
-// src/lib/db-service.ts
-// Service layer that abstracts database access
-// Now uses Supabase for cloud sync
-
 import { supabase } from './supabase';
 
-// ==================== Type Exports ====================
-
-export type Transaction = {
-  id: string;
-  date: string;
-  amount: number;
-  category?: string;
-  note?: string;
-  who?: string;
-};
-
-export type Goal = {
-  id: string;
-  name: string;
-  current: number;
-  target: number;
-  category: "emergency" | "savings" | "fun" | "investment" | "debt" | "other";
-  targetDate?: string;
-  color: string;
-  isDebt?: boolean;
-  originalDebt?: number;
-  completedAt?: string;
-  linkedCategories?: string[];
-  linkedBillNames?: string[];
-};
-
-export type Bill = {
-  id: string;
-  name: string;
-  amount: number;
-  dueDay: number;
-  lastPaid?: string;
-  linkedGoalId?: string;
-  category?: string;
-};
-
-export type Category = {
-  id: string;
-  name: string;
-  limit: number;
-};
-
-export type Settings = {
-  currency: string;
-  uiMode: "professional" | "minimalist";
-  categories: Category[];
-};
-
-// ==================== Transaction Operations ====================
-
-export async function getAllTransactions(): Promise<Transaction[]> {
+// Transaction operations
+export async function getAllTransactions() {
   const { data, error } = await supabase
     .from('transactions')
     .select('*')
@@ -64,7 +11,13 @@ export async function getAllTransactions(): Promise<Transaction[]> {
   return data || [];
 }
 
-export async function addTransaction(txn: Omit<Transaction, 'id'>): Promise<Transaction> {
+export async function addTransaction(txn: {
+  amount: number;
+  date: string;
+  category?: string;
+  note?: string;
+  who?: string;
+}) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -78,7 +31,7 @@ export async function addTransaction(txn: Omit<Transaction, 'id'>): Promise<Tran
   return data;
 }
 
-export async function removeTransaction(id: string): Promise<void> {
+export async function removeTransaction(id: string) {
   const { error } = await supabase
     .from('transactions')
     .delete()
@@ -87,7 +40,7 @@ export async function removeTransaction(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function clearTransactions(): Promise<void> {
+export async function clearTransactions() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -99,9 +52,8 @@ export async function clearTransactions(): Promise<void> {
   if (error) throw error;
 }
 
-// ==================== Goal Operations ====================
-
-export async function getAllGoals(): Promise<Goal[]> {
+// Goal operations
+export async function getAllGoals() {
   const { data, error } = await supabase
     .from('goals')
     .select('*')
@@ -126,7 +78,16 @@ export async function getAllGoals(): Promise<Goal[]> {
   }));
 }
 
-export async function addGoal(goal: Omit<Goal, 'id'>): Promise<Goal> {
+export async function addGoal(goal: {
+  name: string;
+  current: number;
+  target: number;
+  category: string;
+  targetDate?: string;
+  color: string;
+  isDebt?: boolean;
+  originalDebt?: number;
+}) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -161,7 +122,7 @@ export async function addGoal(goal: Omit<Goal, 'id'>): Promise<Goal> {
   };
 }
 
-export async function updateGoal(id: string, updates: Partial<Goal>): Promise<void> {
+export async function updateGoal(id: string, updates: any) {
   const updateData: any = {};
   
   if (updates.name !== undefined) updateData.name = updates.name;
@@ -184,7 +145,7 @@ export async function updateGoal(id: string, updates: Partial<Goal>): Promise<vo
   if (error) throw error;
 }
 
-export async function removeGoal(id: string): Promise<void> {
+export async function removeGoal(id: string) {
   const { error } = await supabase
     .from('goals')
     .delete()
@@ -193,9 +154,8 @@ export async function removeGoal(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// ==================== Bill Operations ====================
-
-export async function getAllBills(): Promise<Bill[]> {
+// Bill operations
+export async function getAllBills() {
   const { data, error } = await supabase
     .from('bills')
     .select('*')
@@ -214,7 +174,13 @@ export async function getAllBills(): Promise<Bill[]> {
   }));
 }
 
-export async function addBill(bill: Omit<Bill, 'id'>): Promise<Bill> {
+export async function addBill(bill: {
+  name: string;
+  amount: number;
+  dueDay: number;
+  category?: string;
+  linkedGoalId?: string;
+}) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -244,7 +210,7 @@ export async function addBill(bill: Omit<Bill, 'id'>): Promise<Bill> {
   };
 }
 
-export async function updateBill(id: string, updates: Partial<Bill>): Promise<void> {
+export async function updateBill(id: string, updates: any) {
   const updateData: any = {};
   
   if (updates.name !== undefined) updateData.name = updates.name;
@@ -262,7 +228,7 @@ export async function updateBill(id: string, updates: Partial<Bill>): Promise<vo
   if (error) throw error;
 }
 
-export async function removeBill(id: string): Promise<void> {
+export async function removeBill(id: string) {
   const { error } = await supabase
     .from('bills')
     .delete()
@@ -271,9 +237,8 @@ export async function removeBill(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// ==================== Settings Operations ====================
-
-export async function getSettings(): Promise<Settings> {
+// Settings operations
+export async function getSettings() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -294,7 +259,7 @@ export async function getSettings(): Promise<Settings> {
         { id: '2', name: 'Dining', limit: 300 },
         { id: '3', name: 'Transport', limit: 200 },
       ],
-      uiMode: 'professional',
+      uiMode: 'default',
     };
   }
   
@@ -305,7 +270,7 @@ export async function getSettings(): Promise<Settings> {
   };
 }
 
-export async function updateSettings(settings: Partial<Settings>): Promise<void> {
+export async function updateSettings(settings: any) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -324,7 +289,7 @@ export async function updateSettings(settings: Partial<Settings>): Promise<void>
   if (error) throw error;
 }
 
-export async function addCategory(category: { id?: string; name: string; limit: number }): Promise<void> {
+export async function addCategory(category: { id?: string; name: string; limit: number }) {
   const settings = await getSettings();
   const newCategory = {
     id: category.id || crypto.randomUUID(),
@@ -337,7 +302,7 @@ export async function addCategory(category: { id?: string; name: string; limit: 
   });
 }
 
-export async function removeCategory(id: string): Promise<void> {
+export async function removeCategory(id: string) {
   const settings = await getSettings();
   await updateSettings({
     categories: settings.categories.filter((c: any) => c.id !== id),

@@ -1,11 +1,10 @@
-// src/pages/RecurringBills.tsx
 import { useEffect, useMemo, useState } from "react";
 import confetti from "canvas-confetti";
 import Page from "./Page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Th, LegendSwatch, Td } from "@/components/recurring/TableHelpers";
-import { BillRow } from "@/components/recurring/BillRow";
+import { BillsTable } from "@/components/recurring/BillsTable";
+import { AddBillForm } from "@/components/recurring/AddBillForm";
 import type { Bill } from "@/components/recurring/types";
 import { useSettings } from "@/hooks/use-settings";
 import { useGoals } from "@/hooks/use-goals";
@@ -248,116 +247,32 @@ export default function RecurringBills() {
           </div>
 
           {/* Controls: add bill */}
-          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6 w-full sm:w-auto">
-            <input
-              placeholder="Name (e.g. Rent)"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="h-9 rounded-md border bg-transparent px-3 text-sm"
-            />
-            <input
-              placeholder="Amount"
-              type="number"
-              value={newAmount}
-              onChange={(e) => setNewAmount(e.target.value)}
-              className="h-9 rounded-md border bg-transparent px-3 text-sm"
-            />
-            <input
-              placeholder="Due day (1-31)"
-              type="number"
-              value={newDueDay}
-              min={1}
-              max={31}
-              onChange={(e) => setNewDueDay(e.target.value)}
-              className="h-9 rounded-md border bg-transparent px-3 text-sm"
-            />
-            <select
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              className="h-9 rounded-md border bg-transparent px-3 text-sm"
-            >
-              <option value="">Category (Optional)</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.name}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={newLinkedGoalId}
-              onChange={(e) => setNewLinkedGoalId(e.target.value)}
-              className="h-9 rounded-md border bg-transparent px-3 text-sm"
-            >
-              <option value="">Goal (Optional)</option>
-              {goals.filter(g => !g.completedAt).map((goal) => (
-                <option key={goal.id} value={goal.id}>
-                  {goal.name}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={addBill}
-              className="h-9 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:bg-primary/90"
-            >
-              Add
-            </button>
-          </div>
+          <AddBillForm
+            newName={newName}
+            setNewName={setNewName}
+            newAmount={newAmount}
+            setNewAmount={setNewAmount}
+            newDueDay={newDueDay}
+            setNewDueDay={setNewDueDay}
+            newCategory={newCategory}
+            setNewCategory={setNewCategory}
+            newLinkedGoalId={newLinkedGoalId}
+            setNewLinkedGoalId={setNewLinkedGoalId}
+            categories={categories}
+            goals={goals}
+            onAdd={addBill}
+          />
         </CardHeader>
 
         <CardContent>
-          <div className="overflow-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-muted-foreground">
-                <tr>
-                  <Th className="w-[28px]"> </Th>
-                  <Th>Bill</Th>
-                  <Th className="text-right">Amount</Th>
-                  <Th className="w-[140px] text-center">Due</Th>
-                  <Th className="w-[120px] text-center">Status</Th>
-                  <Th className="w-[260px] text-right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(({ bill, dueNext, daysUntil, status, isPaidThisCycle }) => (
-                  <BillRow
-                    key={bill.id}
-                    bill={bill}
-                    dueNext={dueNext}
-                    daysUntil={daysUntil}
-                    status={status}
-                    isPaidThisCycle={isPaidThisCycle}
-                    onMarkPaid={markPaid}
-                    onResetPaid={resetPaid}
-                    onEdit={editBill}
-                    onDelete={removeBill}
-                    formatShort={formatShort}
-                  />
-                ))}
-
-                {!rows.length && (
-                  <tr>
-                    <Td colSpan={6} className="text-center py-10 text-muted-foreground">
-                      No recurring bills yet — add one above.
-                    </Td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Legend & Info */}
-          <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <LegendSwatch className="bg-emerald-500" label="Paid this cycle" />
-              <LegendSwatch className="bg-red-500" label="Overdue" />
-              <LegendSwatch className="bg-amber-500" label="Due soon (≤3d)" />
-              <LegendSwatch className="bg-blue-500" label="Upcoming" />
-            </div>
-            <div className="text-xs text-muted-foreground">
-              💡 <strong>Tip:</strong> Bills automatically reset each cycle based on their due date. 
-              Paid bills move to the bottom and will reappear at the top when the next cycle begins.
-            </div>
-          </div>
+          <BillsTable
+            rows={rows}
+            onMarkPaid={markPaid}
+            onResetPaid={resetPaid}
+            onEdit={editBill}
+            onDelete={removeBill}
+            formatShort={formatShort}
+          />
         </CardContent>
       </Card>
     </Page>

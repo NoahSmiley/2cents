@@ -1,18 +1,20 @@
 // src/pages/Settings.tsx
 import { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/contexts/AuthContext";
 import { SettingsStore, type Category } from "@/lib/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, LogOut } from "lucide-react";
 import Page from "./Page";
 import { UpdateChecker } from "@/components/UpdateChecker";
 
 export default function SettingsPage() {
   const settings = useSettings();
+  const { signOut, user } = useAuth();
   const [drafts, setDrafts] = useState<Record<string, {name: string; limit: string}>>({});
 
   const onEdit = (c: Category, patch: Partial<{name: string; limit: string}>) => {
@@ -122,6 +124,25 @@ export default function SettingsPage() {
 
         {/* Update Checker */}
         <UpdateChecker />
+
+        {/* Account */}
+        <Card>
+          <CardHeader><CardTitle>Account</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <div className="text-sm text-muted-foreground">{user?.email}</div>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={() => signOut()}
+              className="w-full"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </Page>
   );

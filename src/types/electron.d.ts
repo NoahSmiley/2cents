@@ -71,6 +71,12 @@ export interface ElectronAPI {
   installUpdate: () => void;
   onUpdateAvailable: (callback: (info: any) => void) => () => void;
   onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+  
+  // Window control functions
+  windowMinimize: () => Promise<void>;
+  windowMaximize: () => Promise<void>;
+  windowClose: () => Promise<void>;
+  windowIsMaximized: () => Promise<boolean>;
 }
 
 declare global {

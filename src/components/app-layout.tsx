@@ -14,6 +14,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider
       defaultOpen
+      className="h-full"
       style={
         {
           "--sidebar-width": "14rem",
@@ -24,8 +25,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     >
       {/* ⬇️ These three must share the same parent */}
       <AppSidebar />
-      <SidebarInset>
-        <div className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur">
+      <SidebarInset className="flex flex-col h-full overflow-hidden">
+        <div className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur flex-shrink-0">
           <div className="h-12 flex items-center gap-2 ps-5 pe-5">
             <SidebarTrigger className="-ml-1 size-7 rounded-md hover:bg-accent" />
             <div className="w-full max-w-6xl flex items-center justify-between px-2">
@@ -34,7 +35,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div className=" w-full py-6">
+        <div className="flex-1 overflow-y-auto w-full py-6">
           {children}
         </div>
       </SidebarInset>

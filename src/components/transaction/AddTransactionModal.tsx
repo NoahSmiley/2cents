@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Ledger } from "@/lib/ledger";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useSettings } from "@/hooks/use-settings";
 import { useGoals } from "@/hooks/use-goals";
 import { QuickPicks, loadQuick, saveQuick } from "./QuickPicks";
 import type { QuickPick } from "./QuickPicks";
+import { ModeToggleButtons } from "./ModeToggleButtons";
+import { TransactionFormFields } from "./TransactionFormFields";
 import {
   Dialog,
   DialogContent,
@@ -107,26 +107,7 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Add Transaction</span>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={mode === "expense" ? "default" : "outline"}
-                onClick={() => setMode("expense")}
-                className="h-8"
-              >
-                Expense
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={mode === "income" ? "default" : "outline"}
-                onClick={() => setMode("income")}
-                className="h-8"
-              >
-                Income
-              </Button>
-            </div>
+            <ModeToggleButtons mode={mode} setMode={setMode} />
           </DialogTitle>
         </DialogHeader>
 
@@ -139,100 +120,24 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
           />
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Amount */}
-            <div className="space-y-2">
-              <Label className="text-sm">Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  {currency}
-                </span>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  autoFocus
-                  className="pl-8 h-11 text-lg"
-                />
-              </div>
-            </div>
-
-            {/* Date & Category Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">Date</Label>
-                <Input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="h-11"
-                />
-              </div>
-              {mode === "expense" && (
-                <div className="space-y-2">
-                  <Label className="text-sm">Category</Label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="h-11 w-full rounded-md border bg-transparent px-3 text-sm"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.name}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Link to Goal */}
-            {goals.filter(g => !g.completedAt).length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm">Link to Goal (Optional)</Label>
-                <select
-                  value={linkedGoalId}
-                  onChange={(e) => setLinkedGoalId(e.target.value)}
-                  className="h-11 w-full rounded-md border bg-transparent px-3 text-sm"
-                >
-                  <option value="">None</option>
-                  {goals.filter(g => !g.completedAt).map((goal) => (
-                    <option key={goal.id} value={goal.id}>
-                      {goal.name} ({goal.isDebt ? "Debt" : "Savings"})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  This amount will be added to the selected goal
-                </p>
-              </div>
-            )}
-
-            {/* Who & Note Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">{mode === "expense" ? "Paid by" : "Received by"}</Label>
-                <select
-                  value={who}
-                  onChange={(e) => setWho(e.target.value as Payer)}
-                  className="h-11 w-full rounded-md border bg-transparent px-3 text-sm"
-                >
-                  <option value="Noah">Noah</option>
-                  <option value="Sam">Sam</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Note (optional)</Label>
-                <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={mode === "expense" ? "e.g., Trader Joe's" : "e.g., Paycheck"}
-                  className="h-11"
-                />
-              </div>
-            </div>
+            <TransactionFormFields
+              mode={mode}
+              amount={amount}
+              setAmount={setAmount}
+              date={date}
+              setDate={setDate}
+              category={category}
+              setCategory={setCategory}
+              who={who}
+              setWho={setWho}
+              note={note}
+              setNote={setNote}
+              linkedGoalId={linkedGoalId}
+              setLinkedGoalId={setLinkedGoalId}
+              categories={categories}
+              goals={goals}
+              currency={currency}
+            />
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">

@@ -38,7 +38,7 @@ export default function Page({
   return (
     <main
       className={cn(
-        "w-full h-full",                 // stretch
+        "w-full min-h-full",             // stretch (min-h allows content to grow)
         PAD[padding],                    // padding preset
         max ? max : "",                  // optional max width
         max && center ? "mx-auto" : "",  // optional centering
