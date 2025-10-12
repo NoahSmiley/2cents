@@ -167,7 +167,13 @@ export default function Dashboard() {
             />
           </CardContent>
         </Card>
-            <div className="flex items-center justify-end gap-2">
+        <Card>
+          <CardHeader><CardTitle>Recent</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <RecentTransactions transactions={recent} currency={C} />
+          </CardContent>
+        </Card>
+        <div className="flex items-center justify-end gap-2">
             <Link to="/transactions">
                 <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/10">View all transactions</Button>
             </Link>
@@ -183,14 +189,6 @@ export default function Dashboard() {
                 Clear all
             </Button>
             </div>
-        {/* Recent */}
-        <Card>
-          <CardHeader><CardTitle>Recent</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <RecentTransactions transactions={recent} currency={C} />
-          </CardContent>
-        </Card>
-
         {/* FAB */}
         <Link to="/add" className="fixed bottom-6 right-6">
           <Button size="lg" className="rounded-full shadow-lg text-white bg-emerald-600 hover:bg-emerald-700">

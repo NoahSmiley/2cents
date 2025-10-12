@@ -13,21 +13,21 @@ import type { QuickPick } from "@/components/transaction/QuickPicks";
 
 /* ---------------------------------- types ---------------------------------- */
 
-type Payer = "Noah" | "Sam";
 type Mode = "expense" | "income";
 
 /* ---------------------------------- page ---------------------------------- */
 
 export default function AddTransaction() {
   const nav = useNavigate();
-  const { categories, currency = "$" } = useSettings();
+  const settings = useSettings();
+  const { categories, currency = "$", coupleMode } = settings;
 
   const defaultCat = categories[0]?.name ?? "Groceries";
   const [mode, setMode] = useState<Mode>("expense");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [category, setCategory] = useState(defaultCat);
-  const [who, setWho] = useState<Payer>("Noah");
+  const [who, setWho] = useState<string>(coupleMode.partner1Name);
   const [note, setNote] = useState("");
   const [saved, setSaved] = useState(false);
   const [quick, setQuick] = useState<QuickPick[]>(() => loadQuick());
@@ -39,6 +39,13 @@ export default function AddTransaction() {
     }
   }, [categories, category]);
 
+  // Update 'who' when couple mode settings change
+  useEffect(() => {
+    if (coupleMode.enabled && !who) {
+      setWho(coupleMode.partner1Name);
+    }
+  }, [coupleMode.enabled, coupleMode.partner1Name, who]);
+
   const parsedAbs = useMemo(() => {
     const n = Number(amount);
     return Number.isFinite(n) ? Math.abs(n) : 0;
@@ -48,7 +55,13 @@ export default function AddTransaction() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!parsedAbs || !category) return;
-    Ledger.add({ amount: signedAmount, date, category, note, who });
+    Ledger.add({ 
+      amount: signedAmount, 
+      date, 
+      category, 
+      note, 
+      who: coupleMode.enabled ? who : undefined 
+    });
     setSaved(true);
     setTimeout(() => nav("/"), 350);
   }
@@ -175,18 +188,20 @@ export default function AddTransaction() {
               </div>
 
               {/* Who & Note Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm">{mode === "expense" ? "Paid by" : "Received by"}</Label>
-                  <select
-                    value={who}
-                    onChange={(e) => setWho(e.target.value as Payer)}
-                    className="h-11 w-full rounded-md border bg-transparent px-3 text-sm"
-                  >
-                    <option value="Noah">Noah</option>
-                    <option value="Sam">Sam</option>
-                  </select>
-                </div>
+              <div className={coupleMode.enabled ? "grid grid-cols-2 gap-4" : "space-y-2"}>
+                {coupleMode.enabled && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">{mode === "expense" ? "Paid by" : "Received by"}</Label>
+                    <select
+                      value={who}
+                      onChange={(e) => setWho(e.target.value)}
+                      className="h-11 w-full rounded-md border bg-transparent px-3 text-sm"
+                    >
+                      <option value={coupleMode.partner1Name}>{coupleMode.partner1Name}</option>
+                      <option value={coupleMode.partner2Name}>{coupleMode.partner2Name}</option>
+                    </select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label className="text-sm">Note (optional)</Label>
                   <Input

@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
   windowClose: () => ipcRenderer.invoke('window:close'),
   windowIsMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  getPlatform: () => ipcRenderer.invoke('window:getPlatform'),
 });
 
 // Type definitions for TypeScript
@@ -96,6 +97,7 @@ export interface ElectronAPI {
   windowMaximize: () => Promise<void>;
   windowClose: () => Promise<void>;
   windowIsMaximized: () => Promise<boolean>;
+  getPlatform: () => Promise<string>;
 }
 
 declare global {

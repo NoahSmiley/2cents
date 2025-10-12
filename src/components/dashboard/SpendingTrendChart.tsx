@@ -38,16 +38,12 @@ export function SpendingTrendChart({ transactions, currency }: SpendingTrendChar
 
   // Convert to array and sort by date
   const chartData = Object.entries(dailyData)
+    .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
     .map(([date, data]) => ({
       date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       income: Math.round(data.income),
       spending: Math.round(data.spending),
-    }))
-    .sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateA.getTime() - dateB.getTime();
-    });
+    }));
 
   const chartConfig = {
     income: {

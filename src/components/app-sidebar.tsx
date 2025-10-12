@@ -12,29 +12,40 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar"
 import { NavLink } from "react-router-dom"
-import { Wallet, Repeat, Target, Settings, List } from "lucide-react"
+import { Wallet, Repeat, Target, Settings, List, HelpCircle, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import logo from "@/assets/twocents.png";
-
-const nav = [
-    { to: "/", label: "Dashboard", icon: Wallet },
-    { to: "/transactions", label: "Transactions", icon: List },
-    { to: "/recurring", label: "Recurring", icon: Repeat },
-    { to: "/goals", label: "Goals", icon: Target },
-    { to: "/settings", label: "Settings", icon: Settings },
-]
+import { useSettings } from "@/hooks/use-settings";
 
 export function AppSidebar() {
+    const settings = useSettings();
+    
+    const baseNav = [
+        { to: "/", label: "Dashboard", icon: Wallet },
+        { to: "/transactions", label: "Transactions", icon: List },
+        { to: "/recurring", label: "Recurring", icon: Repeat },
+        { to: "/goals", label: "Goals", icon: Target },
+    ];
+
+    const coupleNav = settings.coupleMode.enabled 
+        ? [{ to: "/couple", label: "Couple View", icon: Users }]
+        : [];
+
+    const settingsNav = [
+        { to: "/settings", label: "Settings", icon: Settings },
+        { to: "/help", label: "Help", icon: HelpCircle },
+    ];
+
+    const nav = [...baseNav, ...coupleNav, ...settingsNav];
+
     return (
         <Sidebar collapsible="icon" variant="sidebar">
-            <SidebarHeader>
-                <div className="flex items-center gap-2 px-2">
-                    <img
-                        src={logo}
-                        alt="TwoCents"
-                        className="h-10 w-10 shrink-0 rounded object-cover aspect-square"
-                    />
-                </div>
+            <SidebarHeader className="h-12 flex items-center justify-center mt-10 mb-0 p-0">
+                <img
+                    src={logo}
+                    alt="TwoCents"
+                    className="h-10 w-10 min-h-10 min-w-10 shrink-0 rounded-lg object-contain"
+                />
             </SidebarHeader>
 
             <SidebarContent>

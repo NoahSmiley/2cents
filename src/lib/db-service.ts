@@ -6,6 +6,21 @@ import { supabase } from './supabase';
 
 // ==================== Type Exports ====================
 
+export type Household = {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  invite_code?: string;
+};
+
+export type HouseholdMember = {
+  household_id: string;
+  user_id: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+};
+
 export type Transaction = {
   id: string;
   date: string;
@@ -13,6 +28,7 @@ export type Transaction = {
   category?: string;
   note?: string;
   who?: string;
+  household_id?: string;
 };
 
 export type Goal = {
@@ -28,6 +44,7 @@ export type Goal = {
   completedAt?: string;
   linkedCategories?: string[];
   linkedBillNames?: string[];
+  household_id?: string;
 };
 
 export type Bill = {
@@ -38,6 +55,7 @@ export type Bill = {
   lastPaid?: string;
   linkedGoalId?: string;
   category?: string;
+  household_id?: string;
 };
 
 export type Category = {
@@ -46,20 +64,201 @@ export type Category = {
   limit: number;
 };
 
+export type CoupleMode = {
+  enabled: boolean;
+  partner1Name: string;
+  partner2Name: string;
+};
+
 export type Settings = {
   currency: string;
   uiMode: "professional" | "minimalist";
   categories: Category[];
+  coupleMode: CoupleMode;
 };
+
+// ==================== Household Operations ====================
+
+export async function getCurrentHousehold(): Promise<Household | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Check if user is a member of any household
+  const { data: memberships, error: memberError } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .limit(1);
+
+  if (memberError) {
+    console.error('Error fetching household membership:', memberError);
+    return null;
+  }
+
+  if (!memberships || memberships.length === 0) return null;
+
+  // Get household details
+  const { data: household, error: householdError } = await supabase
+    .from('households')
+    .select('*')
+    .eq('id', memberships[0].household_id)
+    .single();
+
+  if (householdError) {
+    console.error('Error fetching household:', householdError);
+    return null;
+  }
+  
+  return household;
+}
+
+export async function createHousehold(name: string): Promise<Household> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Generate invite code
+  const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+  // Create household
+  const { data: household, error: householdError } = await supabase
+    .from('households')
+    .insert({
+      name,
+      created_by: user.id,
+      invite_code: inviteCode,
+    })
+    .select()
+    .single();
+
+  if (householdError) {
+    console.error('Error creating household:', householdError);
+    throw new Error(householdError.message || 'Failed to create household');
+  }
+
+  // Add creator as owner
+  const { error: memberError } = await supabase
+    .from('household_members')
+    .insert({
+      household_id: household.id,
+      user_id: user.id,
+      role: 'owner',
+    });
+
+  if (memberError) {
+    console.error('Error adding household member:', memberError);
+    throw new Error(memberError.message || 'Failed to add member');
+  }
+
+  return household;
+}
+
+export async function joinHousehold(inviteCode: string): Promise<Household> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Find household by invite code
+  const { data: households, error: householdError } = await supabase
+    .from('households')
+    .select('*')
+    .eq('invite_code', inviteCode)
+    .limit(1);
+
+  if (householdError || !households || households.length === 0) {
+    console.error('Error finding household:', householdError);
+    throw new Error('Invalid invite code');
+  }
+
+  const household = households[0];
+
+  // Check if already a member
+  const { data: existing } = await supabase
+    .from('household_members')
+    .select('*')
+    .eq('household_id', household.id)
+    .eq('user_id', user.id)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    throw new Error('Already a member of this household');
+  }
+
+  // Add as member
+  const { error: memberError } = await supabase
+    .from('household_members')
+    .insert({
+      household_id: household.id,
+      user_id: user.id,
+      role: 'member',
+    });
+
+  if (memberError) {
+    console.error('Error adding member:', memberError);
+    throw new Error(memberError.message || 'Failed to join household');
+  }
+
+  return household;
+}
+
+export async function leaveHousehold(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { error } = await supabase
+    .from('household_members')
+    .delete()
+    .eq('user_id', user.id);
+
+  if (error) throw error;
+}
+
+export async function getHouseholdMembers(householdId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('household_members')
+    .select('*')
+    .eq('household_id', householdId);
+
+  if (error) throw error;
+  
+  // Get current user to show their email
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  
+  // Map members with user info (show email for current user, user_id for others)
+  const membersWithDetails = (data || []).map((member) => {
+    const isCurrentUser = member.user_id === currentUser?.id;
+    return {
+      ...member,
+      user: {
+        email: isCurrentUser ? currentUser?.email : `User ${member.user_id.substring(0, 8)}...`
+      }
+    };
+  });
+  
+  return membersWithDetails;
+}
 
 // ==================== Transaction Operations ====================
 
 export async function getAllTransactions(): Promise<Transaction[]> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Check if user is in a household
+  const household = await getCurrentHousehold();
+
+  let query = supabase
     .from('transactions')
     .select('*')
     .order('date', { ascending: false });
+
+  if (household) {
+    // If in household, get household transactions
+    query = query.eq('household_id', household.id);
+  } else {
+    // Otherwise get personal transactions
+    query = query.eq('user_id', user.id).is('household_id', null);
+  }
   
+  const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }
@@ -68,9 +267,16 @@ export async function addTransaction(txn: Omit<Transaction, 'id'>): Promise<Tran
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  // Check if user is in a household
+  const household = await getCurrentHousehold();
+
   const { data, error } = await supabase
     .from('transactions')
-    .insert([{ ...txn, user_id: user.id }])
+    .insert([{ 
+      ...txn, 
+      user_id: user.id,
+      household_id: household?.id || null
+    }])
     .select()
     .single();
   
@@ -102,11 +308,24 @@ export async function clearTransactions(): Promise<void> {
 // ==================== Goal Operations ====================
 
 export async function getAllGoals(): Promise<Goal[]> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Check if user is in a household
+  const household = await getCurrentHousehold();
+
+  let query = supabase
     .from('goals')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (household) {
+    query = query.eq('household_id', household.id);
+  } else {
+    query = query.eq('user_id', user.id).is('household_id', null);
+  }
   
+  const { data, error } = await query;
   if (error) throw error;
   
   // Transform snake_case to camelCase
@@ -130,10 +349,14 @@ export async function addGoal(goal: Omit<Goal, 'id'>): Promise<Goal> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  // Check if user is in a household
+  const household = await getCurrentHousehold();
+
   const { data, error } = await supabase
     .from('goals')
     .insert([{
       user_id: user.id,
+      household_id: household?.id || null,
       name: goal.name,
       current: goal.current,
       target: goal.target,
@@ -196,11 +419,24 @@ export async function removeGoal(id: string): Promise<void> {
 // ==================== Bill Operations ====================
 
 export async function getAllBills(): Promise<Bill[]> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Check if user is in a household
+  const household = await getCurrentHousehold();
+
+  let query = supabase
     .from('bills')
     .select('*')
     .order('due_day', { ascending: true });
+
+  if (household) {
+    query = query.eq('household_id', household.id);
+  } else {
+    query = query.eq('user_id', user.id).is('household_id', null);
+  }
   
+  const { data, error } = await query;
   if (error) throw error;
   
   return (data || []).map(bill => ({
@@ -218,10 +454,14 @@ export async function addBill(bill: Omit<Bill, 'id'>): Promise<Bill> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  // Check if user is in a household
+  const household = await getCurrentHousehold();
+
   const { data, error } = await supabase
     .from('bills')
     .insert([{
       user_id: user.id,
+      household_id: household?.id || null,
       name: bill.name,
       amount: bill.amount,
       due_day: bill.dueDay,
@@ -295,6 +535,11 @@ export async function getSettings(): Promise<Settings> {
         { id: '3', name: 'Transport', limit: 200 },
       ],
       uiMode: 'professional',
+      coupleMode: {
+        enabled: false,
+        partner1Name: 'Partner 1',
+        partner2Name: 'Partner 2',
+      },
     };
   }
   
@@ -302,6 +547,11 @@ export async function getSettings(): Promise<Settings> {
     currency: data.currency,
     categories: data.categories,
     uiMode: data.ui_mode,
+    coupleMode: data.couple_mode || {
+      enabled: false,
+      partner1Name: 'Partner 1',
+      partner2Name: 'Partner 2',
+    },
   };
 }
 
@@ -313,6 +563,7 @@ export async function updateSettings(settings: Partial<Settings>): Promise<void>
   if (settings.currency !== undefined) updateData.currency = settings.currency;
   if (settings.categories !== undefined) updateData.categories = settings.categories;
   if (settings.uiMode !== undefined) updateData.ui_mode = settings.uiMode;
+  if (settings.coupleMode !== undefined) updateData.couple_mode = settings.coupleMode;
 
   const { error } = await supabase
     .from('settings')

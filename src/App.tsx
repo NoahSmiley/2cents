@@ -4,6 +4,8 @@ import Transactions from './pages/Transactions';
 import GoalBuckets from './pages/GoalBuckets';
 import RecurringBills from './pages/RecurringBills';
 import SettingsPage from './pages/Settings';
+import Help from './pages/Help';
+import CoupleView from './pages/CoupleView';
 import AppLayout from './components/app-layout';
 import { DataMigration } from './components/DataMigration';
 import { TitleBar } from './components/TitleBar';
@@ -38,7 +40,9 @@ function AppContent() {
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/goals" element={<GoalBuckets />} />
               <Route path="/recurring" element={<RecurringBills />} />
+              <Route path="/couple" element={<CoupleView />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/help" element={<Help />} />
             </Routes>
           </DataMigration>
         </AppLayout>

@@ -165,10 +165,15 @@ ipcMain.handle('window:minimize', () => {
 
 ipcMain.handle('window:maximize', () => {
   if (win) {
-    if (win.isMaximized()) {
-      win.unmaximize();
+    // On macOS, use native fullscreen; on other platforms, use maximize
+    if (process.platform === 'darwin') {
+      win.setFullScreen(!win.isFullScreen());
     } else {
-      win.maximize();
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
     }
   }
 });
@@ -178,7 +183,13 @@ ipcMain.handle('window:close', () => {
 });
 
 ipcMain.handle('window:isMaximized', () => {
-  return win ? win.isMaximized() : false;
+  if (!win) return false;
+  // On macOS, check fullscreen state; on other platforms, check maximized state
+  return process.platform === 'darwin' ? win.isFullScreen() : win.isMaximized();
+});
+
+ipcMain.handle('window:getPlatform', () => {
+  return process.platform;
 });
 
 // Catch any unhandled errors

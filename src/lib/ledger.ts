@@ -30,12 +30,31 @@ async function initialize() {
   if (!_initialized) {
     _cache = await load();
     _initialized = true;
+    setupRealtimeSync();
   }
 }
 
 function notifyUpdate() {
   _version++;
   window.dispatchEvent(new Event("ledger:update"));
+}
+
+// Setup real-time sync for household data
+function setupRealtimeSync() {
+  // Poll for updates every 30 seconds when in a household
+  // This provides near-real-time sync without requiring Realtime replication
+  setInterval(async () => {
+    try {
+      const household = await dbService.getCurrentHousehold();
+      if (household) {
+        // Only refresh if user is in a household
+        await Ledger.refresh();
+      }
+    } catch (err) {
+      // Silently fail - user might be offline
+      console.debug('Background sync failed:', err);
+    }
+  }, 30000); // 30 seconds
 }
 
 // Initialize on module load

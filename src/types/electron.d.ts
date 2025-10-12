@@ -77,6 +77,7 @@ export interface ElectronAPI {
   windowMaximize: () => Promise<void>;
   windowClose: () => Promise<void>;
   windowIsMaximized: () => Promise<boolean>;
+  getPlatform: () => Promise<string>;
 }
 
 declare global {

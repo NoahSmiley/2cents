@@ -4,6 +4,7 @@
   "version": "1.0.3",
   "main": "electron/main.cjs",
   "scripts": {
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "dev": "vite",
     "electron": "npx electron .",
     "preload:build": "tsc electron/preload.ts --outDir dist-electron --module commonjs --target es2020 --moduleResolution node --skipLibCheck --esModuleInterop",

@@ -3,10 +3,16 @@ import * as dbService from './db-service';
 
 export type Category = { id: string; name: string; limit: number }
 export type UIMode = "professional" | "minimalist"
+export type CoupleMode = {
+  enabled: boolean;
+  partner1Name: string;
+  partner2Name: string;
+}
 export type Settings = { 
   currency: string; 
   categories: Category[];
   uiMode: UIMode;
+  coupleMode: CoupleMode;
 }
 
 const uid = () =>
@@ -17,6 +23,11 @@ const uid = () =>
 const DEFAULTS: Settings = {
   currency: "$",
   uiMode: "professional",
+  coupleMode: {
+    enabled: false,
+    partner1Name: "Partner 1",
+    partner2Name: "Partner 2",
+  },
   categories: [
     { id: uid(), name: "Groceries",  limit: 600 },
     { id: uid(), name: "Eating Out", limit: 250 },
@@ -53,8 +64,8 @@ const emit = () => {
 
 async function persist(next: Settings) {
   current = next; // <-- update cache
-  await dbService.updateSettings(next);
-  emit();
+  emit(); // <-- emit immediately for instant UI update
+  await dbService.updateSettings(next); // persist to DB in background
 }
 
 export const SettingsStore = {
@@ -116,6 +127,17 @@ export const SettingsStore = {
 
   setUIMode(mode: UIMode) {
     persist({ ...current, uiMode: mode })
+  },
+
+  setCoupleMode(enabled: boolean) {
+    persist({ ...current, coupleMode: { ...current.coupleMode, enabled } })
+  },
+
+  setPartnerNames(partner1Name: string, partner2Name: string) {
+    persist({ 
+      ...current, 
+      coupleMode: { ...current.coupleMode, partner1Name, partner2Name } 
+    })
   },
 }
 

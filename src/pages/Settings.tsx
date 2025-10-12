@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus, LogOut } from "lucide-react";
 import Page from "./Page";
 import { UpdateChecker } from "@/components/UpdateChecker";
+import { HouseholdManager } from "@/components/settings/HouseholdManager";
 
 export default function SettingsPage() {
   const settings = useSettings();
@@ -119,8 +120,69 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
+
+            <div className="space-y-3 pt-4 border-t">
+              <div>
+                <h3 className="text-sm font-medium mb-1">Couple Mode</h3>
+                <p className="text-xs text-muted-foreground">Track shared finances with a partner</p>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="couple-mode" className="text-sm font-normal">
+                    {settings.coupleMode.enabled ? "Enabled" : "Disabled"}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {settings.coupleMode.enabled 
+                      ? "Assign transactions to individuals" 
+                      : "Single user mode"}
+                  </p>
+                </div>
+                <Switch
+                  id="couple-mode"
+                  checked={settings.coupleMode.enabled}
+                  onCheckedChange={(checked) => SettingsStore.setCoupleMode(checked)}
+                />
+              </div>
+
+              {settings.coupleMode.enabled && (
+                <div className="space-y-3 pl-4 border-l-2 border-muted">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm w-24">Partner 1</Label>
+                    <Input
+                      className="flex-1"
+                      value={settings.coupleMode.partner1Name}
+                      onChange={(e) => 
+                        SettingsStore.setPartnerNames(
+                          e.target.value, 
+                          settings.coupleMode.partner2Name
+                        )
+                      }
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm w-24">Partner 2</Label>
+                    <Input
+                      className="flex-1"
+                      value={settings.coupleMode.partner2Name}
+                      onChange={(e) => 
+                        SettingsStore.setPartnerNames(
+                          settings.coupleMode.partner1Name,
+                          e.target.value
+                        )
+                      }
+                      placeholder="Partner's name"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Household Sharing */}
+        <HouseholdManager />
 
         {/* Update Checker */}
         <UpdateChecker />
