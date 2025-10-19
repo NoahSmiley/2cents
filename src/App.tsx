@@ -1,3 +1,4 @@
+import { type ComponentType } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
@@ -14,21 +15,30 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPage } from './components/auth/AuthPage';
 import { Loader2 } from 'lucide-react';
 
-function AppContent() {
-  const { user, loading } = useAuth();
+type RouteConfig = {
+  path: string;
+  Component: ComponentType;
+};
 
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+const appRoutes: RouteConfig[] = [
+  { path: '/', Component: Dashboard },
+  { path: '/transactions', Component: Transactions },
+  { path: '/goals', Component: GoalBuckets },
+  { path: '/recurring', Component: RecurringBills },
+  { path: '/couple', Component: CoupleView },
+  { path: '/settings', Component: SettingsPage },
+  { path: '/help', Component: Help },
+];
 
-  if (!user) {
-    return <AuthPage />;
-  }
+function FullScreenLoader() {
+  return (
+    <div className="h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
+function AuthenticatedApp() {
   return (
     <div className="flex flex-col h-screen">
       <TitleBar />
@@ -36,19 +46,29 @@ function AppContent() {
         <AppLayout>
           <DataMigration>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/transactions" element={<Transactions />} />
-              <Route path="/goals" element={<GoalBuckets />} />
-              <Route path="/recurring" element={<RecurringBills />} />
-              <Route path="/couple" element={<CoupleView />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/help" element={<Help />} />
+              {appRoutes.map(({ path, Component }) => (
+                <Route key={path} path={path} element={<Component />} />
+              ))}
             </Routes>
           </DataMigration>
         </AppLayout>
       </div>
     </div>
   );
+}
+
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <FullScreenLoader />;
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  return <AuthenticatedApp />;
 }
 
 export default function App() {
