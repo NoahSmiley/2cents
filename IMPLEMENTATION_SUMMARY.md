@@ -10,7 +10,7 @@
 - ✅ Sign out functionality in Settings page
 
 ### 2. **Cloud Database Service Layer**
-- ✅ Complete Supabase service layer (`src/lib/supabase-service.ts`)
+- ✅ Supabase-backed service layer (`src/lib/db-service.ts`)
 - ✅ All CRUD operations for:
   - Transactions
   - Goals
@@ -45,15 +45,12 @@ Follow the detailed guide in `SUPABASE_SETUP.md`:
 ### 2. Switch from Local to Cloud DB
 Once Supabase is configured, you need to update your app to use the cloud service:
 
-**Option A: Quick Switch (Recommended for testing)**
-Replace imports in your hooks:
+**Option A: Quick Verification (Recommended)**
+Double-check your hooks point at the shared service:
 ```typescript
-// In src/hooks/use-settings.ts, use-goals.ts, etc.
-// Change from:
 import * as dbService from '@/lib/db-service';
-// To:
-import * as dbService from '@/lib/supabase-service';
 ```
+If any modules still reference legacy local helpers, switch them to the import above.
 
 **Option B: Gradual Migration (Recommended for production)**
 Create a hybrid service that:
@@ -80,7 +77,7 @@ Create a one-time migration tool to move existing local data to Supabase:
 
 ### Core Files
 - `src/lib/supabase.ts` - Supabase client configuration
-- `src/lib/supabase-service.ts` - Database service layer
+- `src/lib/db-service.ts` - Database service layer
 - `src/contexts/AuthContext.tsx` - Authentication context
 - `src/components/auth/AuthPage.tsx` - Login/signup UI
 
@@ -102,7 +99,7 @@ Create a one-time migration tool to move existing local data to Supabase:
 4. Test authentication
 
 ### Phase 2: Switch Services (Next)
-1. Update imports to use `supabase-service`
+1. Ensure all imports go through `db-service`
 2. Test all features
 3. Verify data isolation between users
 
