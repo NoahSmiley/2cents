@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import confetti from "canvas-confetti";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Target } from "lucide-react";
+import { Plus, Target, RefreshCw } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
+import { useGoals } from "@/hooks/use-goals";
 import Page from "./Page";
-import * as dbService from "@/lib/db-service";
 import { GoalStats } from "@/components/goals/GoalStats";
 import { TrophyCollection } from "@/components/goals/TrophyCollection";
 import { GoalCard } from "@/components/goals/GoalCard";
@@ -42,7 +42,7 @@ const CATEGORY_CONFIG = {
 export default function GoalBuckets() {
   const { currency = "$", uiMode } = useSettings();
   const isMinimalist = uiMode === "minimalist";
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const { goals, addGoal: addGoalToStore, updateGoalDirect: updateGoalInStore, removeGoal: removeGoalFromStore, refresh } = useGoals();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showContributeModal, setShowContributeModal] = useState(false);
@@ -58,11 +58,6 @@ export default function GoalBuckets() {
   const [linkedBillNames, setLinkedBillNames] = useState<string[]>([]);
   const [newLinkInput, setNewLinkInput] = useState("");
 
-  useEffect(() => {
-    dbService.getAllGoals().then(data => {
-      setGoals(data);
-    });
-  }, []);
 
   async function addGoal() {
     if (!name || !target) return;
@@ -71,7 +66,7 @@ export default function GoalBuckets() {
     const isDebt = category === "debt";
     const targetNum = Number(target);
     
-    const newGoal = await dbService.addGoal({
+    await addGoalToStore({
       name: name.trim(),
       current: isDebt ? targetNum : 0,
       target: isDebt ? 0 : targetNum,
@@ -82,7 +77,6 @@ export default function GoalBuckets() {
       originalDebt: isDebt ? targetNum : undefined,
     });
     
-    setGoals([...goals, newGoal]);
     setName("");
     setTarget("");
     setCategory("savings");
@@ -108,7 +102,7 @@ export default function GoalBuckets() {
     const isDebt = category === "debt";
     const targetNum = Number(target);
     
-    await dbService.updateGoal(selectedGoal.id, {
+    await updateGoalInStore(selectedGoal.id, {
       name: name.trim(), 
       target: isDebt ? 0 : targetNum,
       category,
@@ -119,23 +113,6 @@ export default function GoalBuckets() {
       linkedCategories,
       linkedBillNames,
     });
-    
-    setGoals(goals.map(g => 
-      g.id === selectedGoal.id 
-        ? { 
-            ...g, 
-            name: name.trim(), 
-            target: isDebt ? 0 : targetNum,
-            category,
-            targetDate: targetDate || undefined,
-            color: config.color,
-            isDebt,
-            originalDebt: isDebt ? targetNum : undefined,
-            linkedCategories,
-            linkedBillNames,
-          }
-        : g
-    ));
     
     setName("");
     setTarget("");
@@ -149,8 +126,7 @@ export default function GoalBuckets() {
 
   async function deleteGoal(id: string) {
     if (!confirm("Delete this goal?")) return;
-    await dbService.removeGoal(id);
-    setGoals(goals.filter(g => g.id !== id));
+    await removeGoalFromStore(id);
   }
 
   async function contribute(id: string, amount: number) {
@@ -175,14 +151,7 @@ export default function GoalBuckets() {
       updates.completedAt = new Date().toISOString();
     }
     
-    await dbService.updateGoal(id, updates);
-    
-    setGoals(goals.map(g => {
-      if (g.id === id) {
-        return { ...g, ...updates };
-      }
-      return g;
-    }));
+    await updateGoalInStore(id, updates);
   }
 
   function triggerGoalConfetti() {
@@ -264,10 +233,15 @@ export default function GoalBuckets() {
             <div className="text-sm">
               <span className="font-medium">{goals.filter(g => !g.completedAt).length}</span> active • <span className="font-medium">{completedGoals}</span> completed
             </div>
-            <Button size="sm" onClick={() => setShowAddModal(true)}>
-              <Plus className="h-3 w-3 mr-1" />
-              Add
-            </Button>
+            <div className="flex gap-1">
+              <Button size="sm" variant="outline" onClick={refresh} className="h-7 px-2">
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+              <Button size="sm" onClick={() => setShowAddModal(true)} className="h-7">
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            </div>
           </div>
 
           {sortedGoals.map((goal) => {
@@ -363,14 +337,19 @@ export default function GoalBuckets() {
           <h2 className="text-2xl font-bold">
             {sortedGoals.filter(g => !g.completedAt).length > 0 ? "Active Goals" : "Your Goals"}
           </h2>
-          <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Goal
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={refresh}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Goal
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
         </div>
 
         {goals.length === 0 ? (

@@ -1,7 +1,6 @@
 // src/pages/Transactions.tsx
 import { useMemo, useState, useEffect } from "react";
 import Page from "./Page";
-import { Ledger } from "@/lib/ledger";
 import { useLedger } from "@/hooks/use-ledger";
 import { useSettings } from "@/hooks/use-settings";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -11,12 +10,12 @@ import { TransactionFilters } from "@/components/transactions/TransactionFilters
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { AddTransactionModal } from "@/components/transaction/AddTransactionModal";
 import { formatNum, escapeCSV } from "@/lib/format";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 
 type Who = "Noah" | "Sam" | string;
 
 export default function Transactions() {
-  const all = useLedger(); // live snapshot
+  const { transactions: all, remove: removeTxn, clear: clearTxns, refresh } = useLedger();
   const { categories, currency = "$", uiMode } = useSettings();
   const isMinimalist = uiMode === "minimalist";
 
@@ -74,14 +73,14 @@ export default function Transactions() {
   // -------- actions --------
   function onDelete(id: string) {
     if (confirm("Delete this transaction?")) {
-      Ledger.remove(id);
+      removeTxn(id);
     }
   }
   
   function onClearAll() {
     if (!all.length) return;
     if (confirm("This will permanently delete ALL transactions. Continue?")) {
-      Ledger.clear();
+      clearTxns();
     }
   }
   
@@ -132,6 +131,9 @@ export default function Transactions() {
               <span className="font-medium">{rows.length}</span> shown
             </div>
             <div className="flex gap-1">
+              <Button size="sm" variant="outline" onClick={refresh} className="h-7 px-2">
+                <RefreshCw className="h-3 w-3" />
+              </Button>
               <Button size="sm" variant="outline" onClick={exportCSV} disabled={!rows.length} className="h-7 text-xs">Export</Button>
               <Button size="sm" onClick={() => setShowAddModal(true)} className="h-7 text-xs">
                 <Plus className="h-3 w-3 mr-1" />
@@ -185,6 +187,9 @@ export default function Transactions() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={refresh}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
             <Button 
               onClick={() => setShowAddModal(true)} 
               className="bg-emerald-600 hover:bg-emerald-700 text-white"

@@ -1,3 +1,5 @@
+import { DayPicker } from "@/components/ui/day-picker";
+
 interface AddBillFormProps {
   newName: string;
   setNewName: (name: string) => void;
@@ -44,14 +46,10 @@ export function AddBillForm({
         onChange={(e) => setNewAmount(e.target.value)}
         className="h-9 rounded-md border bg-transparent px-3 text-sm"
       />
-      <input
-        placeholder="Due day (1-31)"
-        type="number"
-        value={newDueDay}
-        min={1}
-        max={31}
-        onChange={(e) => setNewDueDay(e.target.value)}
-        className="h-9 rounded-md border bg-transparent px-3 text-sm"
+      <DayPicker
+        value={Number(newDueDay) || 1}
+        onChange={(day) => setNewDueDay(String(day))}
+        className="w-full"
       />
       <select
         value={newCategory}

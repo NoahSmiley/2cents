@@ -2,6 +2,8 @@
 import { useSyncExternalStore } from "react";
 import { Ledger, type Txn } from "@/lib/ledger";
 
+export type { Txn } from "@/lib/ledger";
+
 function subscribe(cb: () => void) {
   const on = () => cb();
   window.addEventListener("ledger:update", on);
@@ -17,5 +19,13 @@ function getSnapshot(): Txn[] {
 const getServerSnapshot = () => [] as Txn[];
 
 export function useLedger() {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const transactions = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  
+  return {
+    transactions,
+    add: Ledger.add.bind(Ledger),
+    remove: Ledger.remove.bind(Ledger),
+    clear: Ledger.clear.bind(Ledger),
+    refresh: Ledger.refresh.bind(Ledger),
+  };
 }

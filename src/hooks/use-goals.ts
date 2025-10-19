@@ -1,45 +1,18 @@
-import { useState, useEffect } from "react";
-import * as dbService from "@/lib/db-service";
+import { useSyncExternalStore, useEffect } from "react";
+import GoalsStore from "@/lib/goals";
 
-export interface Goal {
-  id: string;
-  name: string;
-  current: number;
-  target: number;
-  category: "emergency" | "savings" | "fun" | "investment" | "debt" | "other";
-  targetDate?: string;
-  color: string;
-  isDebt?: boolean;
-  originalDebt?: number;
-  completedAt?: string;
-  linkedCategories?: string[];
-  linkedBillNames?: string[];
-}
+export type { Goal } from "@/lib/goals";
 
 export function useGoals() {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const goals = useSyncExternalStore(
+    GoalsStore.subscribe,
+    GoalsStore.get,
+    GoalsStore.get
+  );
 
-  // Load goals from database on mount
+  // Ensure data is loaded on first mount
   useEffect(() => {
-    dbService.getAllGoals().then(data => {
-      setGoals(data);
-      setLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
-    const handleStorageChange = async () => {
-      const data = await dbService.getAllGoals();
-      setGoals(data);
-    };
-
-    // Listen for custom event for same-window updates
-    window.addEventListener("goals-updated", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("goals-updated", handleStorageChange);
-    };
+    GoalsStore.ensureInitialized();
   }, []);
 
   const updateGoal = async (goalId: string, amount: number) => {
@@ -50,15 +23,16 @@ export function useGoals() {
       ? goal.current - amount  // Debt: subtract payment
       : goal.current + amount; // Savings: add contribution
     
-    await dbService.updateGoal(goalId, { current: Math.max(0, newCurrent) });
-    
-    // Update local state
-    setGoals(goals.map(g => 
-      g.id === goalId ? { ...g, current: Math.max(0, newCurrent) } : g
-    ));
-    
-    window.dispatchEvent(new Event("goals-updated"));
+    await GoalsStore.updateGoal(goalId, { current: Math.max(0, newCurrent) });
   };
 
-  return { goals, updateGoal, loading };
+  return {
+    goals,
+    updateGoal,
+    addGoal: GoalsStore.addGoal.bind(GoalsStore),
+    updateGoalDirect: GoalsStore.updateGoal.bind(GoalsStore),
+    removeGoal: GoalsStore.removeGoal.bind(GoalsStore),
+    refresh: GoalsStore.refresh.bind(GoalsStore),
+    loading: false, // With sync store, we don't need loading state
+  };
 }

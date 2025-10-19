@@ -7,7 +7,6 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLedger } from "@/hooks/use-ledger";
 import { useSettings } from "@/hooks/use-settings";
-import { Ledger } from "@/lib/ledger";
 import { CategoryProgress } from "@/components/dashboard/CategoryProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { MonthlySummary } from "@/components/dashboard/MonthlySummary";
@@ -22,7 +21,7 @@ import { useGoals } from "@/hooks/use-goals";
 import { useState, useEffect } from "react";
 
 export default function Dashboard() {
-  const txns = useLedger();
+  const { transactions: txns, clear: clearTxns } = useLedger();
   const settings = useSettings();
   const { goals } = useGoals();
   const C = settings.currency || "$";
@@ -182,7 +181,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={() => {
                 if (confirm("Delete ALL transactions?")) {
-                    Ledger.clear();
+                    clearTxns();
                 }
                 }}
             >

@@ -11,7 +11,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 type FilterMode = "all" | "partner1" | "partner2";
 
 export default function CoupleView() {
-  const txns = useLedger();
+  const { transactions: txns } = useLedger();
   const settings = useSettings();
   const { currency, coupleMode } = settings;
   const [filter, setFilter] = useState<FilterMode>("all");

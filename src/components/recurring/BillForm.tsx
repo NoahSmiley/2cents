@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DayPicker } from "@/components/ui/day-picker";
 import type { FxMode } from "./types";
 
 interface BillFormProps {
@@ -41,14 +42,10 @@ export function BillForm({
         onChange={(e) => onAmountChange(e.target.value)}
         className="h-9"
       />
-      <Input
-        placeholder="Due day"
-        type="number"
-        value={dueDay}
-        min={1}
-        max={31}
-        onChange={(e) => onDueDayChange(e.target.value)}
-        className="h-9"
+      <DayPicker
+        value={Number(dueDay) || 1}
+        onChange={(day) => onDueDayChange(String(day))}
+        className="w-full"
       />
       <select
         className="h-9 rounded-md border bg-transparent px-3 text-sm"

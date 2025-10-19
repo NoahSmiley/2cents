@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import confetti from "canvas-confetti";
 import Page from "./Page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { DayPicker } from "@/components/ui/day-picker";
 import { BillsTable } from "@/components/recurring/BillsTable";
 import { AddBillForm } from "@/components/recurring/AddBillForm";
-import type { Bill } from "@/components/recurring/types";
 import { useSettings } from "@/hooks/use-settings";
 import { useGoals } from "@/hooks/use-goals";
-import * as dbService from "@/lib/db-service";
+import { useBills } from "@/hooks/use-bills";
 import {
   todayISO,
   startOfDay,
@@ -19,19 +20,12 @@ import {
 } from "@/lib/date-utils";
 
 export default function RecurringBills() {
-  const [bills, setBills] = useState<Bill[]>([]);
+  const { bills, addBill: addBillToStore, updateBill: updateBillInStore, removeBill: removeBillFromStore, refresh } = useBills();
   const settings = useSettings();
   const { goals } = useGoals();
   const isMinimalist = settings.uiMode === "minimalist";
   const categories = settings.categories || [];
   const currency = settings.currency || "$";
-
-  // Load bills from database on mount
-  useEffect(() => {
-    dbService.getAllBills().then(data => {
-      setBills(data);
-    });
-  }, []);
 
   // add form
   const [newName, setNewName] = useState("");
@@ -71,7 +65,7 @@ export default function RecurringBills() {
     const day = Math.max(1, Math.min(31, Number(newDueDay)));
     if (!newName.trim() || !Number.isFinite(amt)) return;
     
-    const newBill = await dbService.addBill({
+    await addBillToStore({
       name: newName.trim(), 
       amount: Math.abs(amt), 
       dueDay: day, 
@@ -80,7 +74,6 @@ export default function RecurringBills() {
       linkedGoalId: newLinkedGoalId || undefined,
     });
     
-    setBills((prev) => [newBill, ...prev]);
     setNewName("");
     setNewAmount("");
     setNewDueDay("1");
@@ -90,14 +83,12 @@ export default function RecurringBills() {
 
   async function removeBill(id: string) {
     if (!confirm("Delete this bill/subscription?")) return;
-    await dbService.removeBill(id);
-    setBills((prev) => prev.filter((b) => b.id !== id));
+    await removeBillFromStore(id);
   }
 
   async function markPaid(id: string, event?: React.MouseEvent) {
     const today = todayISO();
-    await dbService.updateBill(id, { lastPaid: today });
-    setBills((prev) => prev.map((b) => (b.id === id ? { ...b, lastPaid: today } : b)));
+    await updateBillInStore(id, { lastPaid: today });
     
     // Get button position for confetti origin
     let x = 0.5;
@@ -140,14 +131,12 @@ export default function RecurringBills() {
     setTimeout(shoot, 200);
   }
 
-  function resetPaid(id: string) {
-    setBills((prev) => prev.map((b) => (b.id === id ? { ...b, lastPaid: "" } : b)));
+  async function resetPaid(id: string) {
+    await updateBillInStore(id, { lastPaid: undefined });
   }
 
-  function editBill(id: string, data: { name: string; amount: number; dueDay: number; linkedGoalId?: string; category?: string }) {
-    setBills((prev) => prev.map((b) => 
-      b.id === id ? { ...b, ...data } : b
-    ));
+  async function editBill(id: string, data: { name: string; amount: number; dueDay: number; linkedGoalId?: string; category?: string }) {
+    await updateBillInStore(id, data);
   }
 
   if (isMinimalist) {
@@ -158,6 +147,14 @@ export default function RecurringBills() {
             <div className="text-sm">
               <span className="font-medium">{bills.length}</span> bills
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={refresh}
+              className="h-7 px-2"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
           </div>
 
           {/* Add Bill Form */}
@@ -176,14 +173,10 @@ export default function RecurringBills() {
                 onChange={(e) => setNewAmount(e.target.value)}
                 className="h-7 rounded border bg-transparent px-2 text-sm"
               />
-              <input
-                placeholder="Due day"
-                type="number"
-                value={newDueDay}
-                min={1}
-                max={31}
-                onChange={(e) => setNewDueDay(e.target.value)}
-                className="h-7 rounded border bg-transparent px-2 text-sm"
+              <DayPicker
+                value={Number(newDueDay) || 1}
+                onChange={(day) => setNewDueDay(String(day))}
+                className="h-7"
               />
               <Button onClick={addBill} className="h-7 text-xs">Add Bill</Button>
             </div>
@@ -246,8 +239,17 @@ export default function RecurringBills() {
             </div>
           </div>
 
-          {/* Controls: add bill */}
-          <AddBillForm
+          {/* Controls: refresh and add bill */}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={refresh}
+              className="h-9 px-3"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <AddBillForm
             newName={newName}
             setNewName={setNewName}
             newAmount={newAmount}
@@ -262,6 +264,7 @@ export default function RecurringBills() {
             goals={goals}
             onAdd={addBill}
           />
+          </div>
         </CardHeader>
 
         <CardContent>

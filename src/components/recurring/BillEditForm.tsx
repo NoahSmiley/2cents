@@ -1,4 +1,4 @@
-import { Input } from "@/components/ui/input";
+import { DayPicker } from "@/components/ui/day-picker";
 
 interface BillEditFormProps {
   editForm: {
@@ -16,13 +16,10 @@ interface BillEditFormProps {
 export function BillEditForm({ editForm, setEditForm, categories, goals }: BillEditFormProps) {
   return (
     <div className="space-y-2">
-      <Input
-        type="number"
-        value={editForm.dueDay}
-        onChange={(e) => setEditForm((prev: any) => ({ ...prev, dueDay: e.target.value }))}
-        className="h-8 text-sm w-16 mx-auto"
-        min={1}
-        max={31}
+      <DayPicker
+        value={Number(editForm.dueDay) || 1}
+        onChange={(day) => setEditForm((prev: any) => ({ ...prev, dueDay: String(day) }))}
+        className="w-full"
       />
       <select
         value={editForm.category}

@@ -492,7 +492,7 @@ export async function updateBill(id: string, updates: Partial<Bill>): Promise<vo
   if (updates.dueDay !== undefined) updateData.due_day = updates.dueDay;
   if (updates.category !== undefined) updateData.category = updates.category;
   if (updates.linkedGoalId !== undefined) updateData.linked_goal_id = updates.linkedGoalId;
-  if (updates.lastPaid !== undefined) updateData.last_paid = updates.lastPaid;
+  if ('lastPaid' in updates) updateData.last_paid = updates.lastPaid || null;
 
   const { error } = await supabase
     .from('bills')
