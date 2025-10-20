@@ -17,7 +17,6 @@ export function Calculator({ onClose }: CalculatorProps) {
   const calcRef = useRef<HTMLDivElement>(null);
   const { position, handleMouseDown } = useDraggable();
 
-  // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key >= '0' && e.key <= '9') {
